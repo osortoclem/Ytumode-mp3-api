@@ -9,9 +9,12 @@ import { randomUUID } from 'crypto';
 
 const app = express();
 const port = process.env.PORT || 3000;
-const ytDlpWrap = new YtDlpWrap();
+const ytDlpWrap = new YtDlpWrap(path.join('./bin/yt-dlp')); // usa binario local
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Establecer path a ffmpeg local
+ffmpeg.setFfmpegPath(path.join(__dirname, 'bin', 'ffmpeg'));
 
 app.get('/ytmp3', async (req, res) => {
   const url = req.query.url;
@@ -22,7 +25,7 @@ app.get('/ytmp3', async (req, res) => {
   const audioPath = path.join(__dirname, `${id}.mp3`);
 
   try {
-    // Descargar video
+    // Descargar audio del video
     await ytDlpWrap.execPromise([
       url,
       '-f', 'bestaudio',
@@ -32,7 +35,8 @@ app.get('/ytmp3', async (req, res) => {
     // Convertir a MP3
     await new Promise((resolve, reject) => {
       ffmpeg(videoPath)
-        .toFormat('mp3')
+        .audioCodec('libmp3lame')
+        .format('mp3')
         .on('error', reject)
         .on('end', resolve)
         .save(audioPath);
